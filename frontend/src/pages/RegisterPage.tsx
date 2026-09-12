@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth, normalizeEmail } from '../context/AuthContext';
-import { ShieldCheck, User, Mail, Phone, Lock, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { ShieldCheck, User, Mail, Phone, Lock, AlertTriangle, ArrowRight } from 'lucide-react';
 
 interface RegisterPageProps {
   onRegisterSuccess: () => void;
@@ -44,7 +44,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
         setError(res.message || 'Registration failed.');
       }
     } catch (err: any) {
-      setError(err.message || 'Server error during registration.');
+      setError(err.message || 'Connection error. Please try signing in or retry.');
       setLoading(false);
     }
   };
@@ -65,9 +65,21 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
       <div className="glass-modal rounded-3xl p-6 sm:p-8 border border-willow-emerald/30 shadow-2xl space-y-5">
         
         {error && (
-          <div className="p-3.5 rounded-xl bg-red-950/80 border border-red-500/50 text-red-300 text-xs flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
-            <span>{error}</span>
+          <div className="p-3.5 rounded-xl bg-red-950/80 border border-red-500/50 text-red-300 text-xs flex flex-col gap-2 animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
+              <span>{error}</span>
+            </div>
+            {error.toLowerCase().includes('already exists') && (
+              <button
+                type="button"
+                onClick={onNavigateToLogin}
+                className="self-start px-3 py-1 bg-willow-emerald text-black font-bold rounded-lg text-[11px] hover:brightness-110 cursor-pointer transition-all flex items-center gap-1 mt-1"
+              >
+                <span>Proceed to Sign In</span>
+                <ArrowRight className="w-3 h-3" />
+              </button>
+            )}
           </div>
         )}
 
@@ -158,7 +170,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-willow-emerald via-emerald-500 to-teal-400 text-black font-black text-sm shadow-glow-emerald hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 mt-2"
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-willow-emerald via-emerald-500 to-teal-400 text-black font-black text-sm shadow-glow-emerald hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
           >
             <ShieldCheck className="w-4 h-4" />
             <span>{loading ? 'Creating Account...' : 'Register & Proceed to Sign In'}</span>
@@ -171,7 +183,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
           <button
             type="button"
             onClick={onNavigateToLogin}
-            className="text-willow-neon font-bold hover:underline"
+            className="text-willow-neon font-bold hover:underline cursor-pointer"
           >
             Sign In Here
           </button>
