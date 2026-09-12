@@ -52,26 +52,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string): Promise<{ success: boolean; message?: string }> => {
     try {
       const res = await api.login(email);
-      if (res.success && res.user) {
+      if (res && res.success && res.user) {
         setUser(res.user);
         setDuplicateSessionAlert(false);
         return { success: true };
       }
-      return { success: false, message: res.message || 'Login failed' };
+      return { success: false, message: res?.message || 'Login failed' };
     } catch (err: any) {
-      return { success: false, message: 'Cannot connect to backend server' };
+      return { success: false, message: err?.message || 'Cannot connect to backend server' };
     }
   };
 
   const register = async (name: string, email: string, phone: string): Promise<{ success: boolean; message?: string }> => {
     try {
       const res = await api.register(name, email, phone);
-      if (res.success) {
+      if (res && res.success) {
         return { success: true };
       }
-      return { success: false, message: res.message || 'Registration failed' };
+      return { success: false, message: res?.message || 'Registration failed' };
     } catch (err: any) {
-      return { success: false, message: 'Server error during registration' };
+      return { success: false, message: err?.message || 'Server error during registration' };
     }
   };
 

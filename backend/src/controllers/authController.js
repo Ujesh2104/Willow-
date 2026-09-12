@@ -15,7 +15,7 @@ const normalizeEmail = (rawEmail) => {
 export const register = (req, res) => {
   const { name, email, phone } = req.body;
   if (!name || !email) {
-    return res.status(400).json({ success: false, message: 'Name and email are required' });
+    return res.status(400).json({ success: false, message: 'Full name and email are required.' });
   }
 
   const sanitized = normalizeEmail(email);
@@ -24,21 +24,21 @@ export const register = (req, res) => {
   if (existing) {
     return res.status(400).json({
       success: false,
-      message: `An account already exists for sanitized identity: ${sanitized}`
+      message: `An account already exists with ${sanitized}. Please Sign In directly.`
     });
   }
 
   const newSessionId = 'sess_' + Math.random().toString(36).substring(2, 9);
   const newUser = {
     id: 'usr_' + Date.now().toString(36),
-    name,
+    name: name.trim(),
     email: sanitized,
     phone: phone || '+91 98000 00000',
     currentSessionId: newSessionId,
     savedFans: [
       {
         id: 'fan_' + Date.now(),
-        name,
+        name: name.trim(),
         age: 25,
         gender: 'M',
         idType: 'Aadhaar',
