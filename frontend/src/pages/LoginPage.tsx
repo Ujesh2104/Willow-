@@ -46,19 +46,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     }
   };
 
-  const handleQuickDemoLogin = async (role: 'fan' | 'admin') => {
-    const demoEmail = role === 'admin' ? 'admin@willow.com' : 'fan@gmail.com';
-    setEmail(demoEmail);
-    setPassword('password123');
-
-    setLoading(true);
-    const res = await login(demoEmail, 'password123');
-    setLoading(false);
-    if (res.success) {
-      onLoginSuccess(role);
-    }
-  };
-
   return (
     <div className="max-w-md mx-auto px-4 py-8 text-white space-y-6">
       
@@ -125,7 +112,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-willow-emerald via-emerald-500 to-teal-400 text-black font-black text-sm shadow-glow-emerald hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 mt-2"
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-willow-emerald via-emerald-500 to-teal-400 text-black font-black text-sm shadow-glow-emerald hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
           >
             <ShieldCheck className="w-4 h-4" />
             <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
@@ -133,37 +120,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
         </form>
 
-        <div className="pt-3 border-t border-slate-800 space-y-2">
-          <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider text-center">
-            Quick 1-Click Demo Sign In:
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickDemoLogin('fan')}
-              className="px-3 py-2 rounded-xl bg-willow-850 hover:bg-willow-emerald hover:text-black border border-slate-700 text-xs font-bold text-slate-200 transition-all flex items-center justify-center gap-1.5"
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>Fan Login</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickDemoLogin('admin')}
-              className="px-3 py-2 rounded-xl bg-purple-950/80 hover:bg-purple-600 hover:text-white border border-purple-800/80 text-xs font-bold text-purple-200 transition-all flex items-center justify-center gap-1.5"
-            >
-              <Settings className="w-3.5 h-3.5" />
-              <span>Admin Login</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="text-center pt-2 text-xs text-slate-400 border-t border-slate-800">
+        <div className="text-center pt-3 text-xs text-slate-400 border-t border-slate-800">
           New fan?{' '}
           <button
             type="button"
             onClick={onNavigateToRegister}
-            className="text-willow-neon font-bold hover:underline"
+            className="text-willow-neon font-bold hover:underline cursor-pointer"
           >
             Create Account
           </button>

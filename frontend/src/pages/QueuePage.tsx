@@ -93,9 +93,9 @@ export const QueuePage: React.FC<QueuePageProps> = ({ onTurnReady, onCancelQueue
 
           <button
             onClick={onTurnReady}
-            className="px-3 py-1.5 rounded-lg bg-willow-emerald/20 text-willow-neon hover:bg-willow-emerald hover:text-black font-bold border border-willow-emerald/40 transition-all flex items-center gap-1"
+            className="px-3.5 py-1.5 rounded-lg bg-willow-emerald/20 text-willow-neon hover:bg-willow-emerald hover:text-black font-bold border border-willow-emerald/40 transition-all flex items-center gap-1 cursor-pointer"
           >
-            <span>Skip Wait (Demo Mode)</span>
+            <span>Proceed to Seat Selection</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>

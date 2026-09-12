@@ -95,7 +95,7 @@ export const GatekeeperPage: React.FC<GatekeeperPageProps> = ({ onBackToHome }) 
           </div>
 
           <div className="pt-2 border-t border-slate-800">
-            <p className="text-[11px] text-slate-400 mb-2 font-bold uppercase">Quick Demo Test Codes:</p>
+            <p className="text-[11px] text-slate-400 mb-2 font-bold uppercase">Recent Turnstile Passes:</p>
             <div className="flex flex-wrap gap-2">
               {bookings.map((b) => (
                 <button
