@@ -1,15 +1,119 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Booking } from '../types';
 import { useBooking } from '../context/BookingContext';
-import { ShieldCheck, QrCode, Lock, Clock, MapPin, Sparkles, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, Lock, Clock, MapPin, CheckCircle2, Barcode, QrCode } from 'lucide-react';
 
 interface DynamicTicketPassProps {
   booking: Booking;
 }
 
+const BarcodeDisplay: React.FC<{ token: string }> = ({ token }) => {
+  const bars = useMemo(() => {
+    const list: { width: number; isSpace: boolean }[] = [];
+    list.push({ width: 3, isSpace: false }, { width: 1, isSpace: true }, { width: 2, isSpace: false }, { width: 2, isSpace: true });
+    
+    for (let i = 0; i < token.length; i++) {
+      const code = token.charCodeAt(i);
+      const b1 = (code % 3) + 1;
+      const b2 = ((code >> 1) % 3) + 1;
+      const b3 = ((code >> 2) % 3) + 1;
+      const b4 = ((code >> 3) % 2) + 1;
+      list.push({ width: b1, isSpace: false });
+      list.push({ width: b2, isSpace: true });
+      list.push({ width: b3, isSpace: false });
+      list.push({ width: b4, isSpace: true });
+    }
+    
+    list.push({ width: 2, isSpace: false }, { width: 2, isSpace: true }, { width: 3, isSpace: false });
+    return list;
+  }, [token]);
+
+  return (
+    <div className="bg-white p-4 rounded-2xl shadow-glow-emerald relative overflow-hidden flex flex-col items-center justify-center space-y-2">
+      <div className="w-full flex items-center justify-center overflow-hidden py-1">
+        <svg className="w-full h-20 max-h-24" viewBox="0 0 340 70" preserveAspectRatio="none">
+          {(() => {
+            let posX = 12;
+            return bars.map((bar, index) => {
+              const currentX = posX;
+              posX += bar.width * 2.1;
+              if (bar.isSpace) return null;
+              return <rect key={index} x={currentX} y="4" width={bar.width * 1.8} height="62" fill="#030706" rx="0.5" />;
+            });
+          })()}
+        </svg>
+      </div>
+      
+      <div className="font-mono text-xs sm:text-sm font-black tracking-widest text-slate-900 border-t border-slate-200 pt-1 w-full text-center">
+        ||| {token} |||
+      </div>
+
+      <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent animate-pulse shadow-glow-emerald top-1/2 -translate-y-1/2"></div>
+    </div>
+  );
+};
+
+const QRCodeDisplay: React.FC<{ token: string }> = ({ token }) => {
+  const grid = useMemo(() => {
+    const size = 15;
+    const matrix: boolean[][] = Array(size).fill(false).map(() => Array(size).fill(false));
+    
+    const setCorner = (r: number, c: number) => {
+      for (let i = 0; i < 4; i++) {
+        for (let j = 0; j < 4; j++) {
+          if (i === 0 || i === 3 || j === 0 || j === 3) {
+            matrix[r + i][c + j] = true;
+          } else if (i === 1 && j === 1) {
+            matrix[r + i][c + j] = false;
+          } else {
+            matrix[r + i][c + j] = true;
+          }
+        }
+      }
+    };
+
+    setCorner(0, 0);
+    setCorner(0, size - 4);
+    setCorner(size - 4, 0);
+
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if ((r < 4 && c < 4) || (r < 4 && c >= size - 4) || (r >= size - 4 && c < 4)) continue;
+        const hash = (token.charCodeAt((r * size + c) % token.length) + r * 7 + c * 11) % 5;
+        matrix[r][c] = hash <= 2;
+      }
+    }
+    return matrix;
+  }, [token]);
+
+  return (
+    <div className="bg-white p-4 rounded-2xl shadow-glow-emerald relative overflow-hidden flex flex-col items-center justify-center space-y-2">
+      <div className="p-2 bg-white rounded-xl">
+        <div className="grid grid-cols-15 gap-0.5 w-40 h-40">
+          {grid.map((row, r) =>
+            row.map((cell, c) => (
+              <div
+                key={`${r}-${c}`}
+                className={`${cell ? 'bg-slate-950' : 'bg-transparent'} rounded-[1px]`}
+              />
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="font-mono text-[11px] font-bold text-slate-800 tracking-wider">
+        {token}
+      </div>
+
+      <div className="absolute inset-x-2 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent animate-pulse shadow-glow-emerald top-1/2 -translate-y-1/2"></div>
+    </div>
+  );
+};
+
 export const DynamicTicketPass: React.FC<DynamicTicketPassProps> = ({ booking }) => {
   const { currentRollingHash } = useBooking();
   const [secondsRemaining, setSecondsRemaining] = useState<number>(30);
+  const [passViewMode, setPassViewMode] = useState<'barcode' | 'qr'>('barcode');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -17,6 +121,8 @@ export const DynamicTicketPass: React.FC<DynamicTicketPassProps> = ({ booking })
     }, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const tokenToDisplay = currentRollingHash || `WLW-${booking.id.slice(-6).toUpperCase()}-${Date.now().toString().slice(-6)}`;
 
   return (
     <div className="w-full max-w-md mx-auto glass-modal rounded-3xl overflow-hidden border border-willow-emerald/40 shadow-glow-emerald text-white">
@@ -36,15 +142,17 @@ export const DynamicTicketPass: React.FC<DynamicTicketPassProps> = ({ booking })
         <div className="grid grid-cols-3 gap-2 text-center bg-willow-900/90 rounded-2xl p-3 border border-slate-800">
           <div className="border-r border-slate-800 pr-2">
             <p className="text-[10px] uppercase font-bold text-slate-400">Entry Gate</p>
-            <p className="text-xs font-black text-willow-gold font-mono truncate">{booking.gateDetails.gateNumber.split(' ')[0]} {booking.gateDetails.gateNumber.split(' ')[1]}</p>
+            <p className="text-xs font-black text-willow-gold font-mono truncate">
+              {booking.gateDetails?.gateNumber ? `${booking.gateDetails.gateNumber.split(' ')[0]} ${booking.gateDetails.gateNumber.split(' ')[1] || ''}` : 'Gate 04'}
+            </p>
           </div>
           <div className="border-r border-slate-800 px-2">
             <p className="text-[10px] uppercase font-bold text-slate-400">Turnstile</p>
-            <p className="text-xs font-black text-white font-mono">{booking.gateDetails.turnstile}</p>
+            <p className="text-xs font-black text-white font-mono">{booking.gateDetails?.turnstile || 'Turnstile #04'}</p>
           </div>
           <div className="pl-2">
             <p className="text-[10px] uppercase font-bold text-slate-400">Time</p>
-            <p className="text-xs font-black text-willow-emerald font-mono">05:30 PM</p>
+            <p className="text-xs font-black text-willow-emerald font-mono">07:00 PM</p>
           </div>
         </div>
 
@@ -64,38 +172,49 @@ export const DynamicTicketPass: React.FC<DynamicTicketPassProps> = ({ booking })
           </div>
         </div>
 
-        <div className="p-6 rounded-2xl bg-black/60 border border-willow-emerald/30 text-center relative overflow-hidden">
+        <div className="p-5 sm:p-6 rounded-2xl bg-black/70 border border-willow-emerald/30 text-center relative overflow-hidden space-y-4">
           
           {booking.isPassUnlocked ? (
             <div className="space-y-4">
               
-              <div className="relative w-48 h-48 mx-auto bg-white p-3 rounded-2xl shadow-glow-neon flex items-center justify-center">
-                
-                <div className="w-full h-full bg-slate-950 rounded-xl p-3 flex flex-col items-center justify-between">
-                  <div className="w-full flex justify-between">
-                    <div className="w-8 h-8 bg-black border-4 border-willow-emerald rounded-md"></div>
-                    <div className="w-8 h-8 bg-black border-4 border-willow-emerald rounded-md"></div>
-                  </div>
-                  <div className="my-auto text-center">
-                    <span className="text-3xl">🏏</span>
-                    <p className="text-[8px] font-mono text-willow-neon tracking-widest mt-1">ROLLING-PASS</p>
-                  </div>
-                  <div className="w-full flex justify-between">
-                    <div className="w-8 h-8 bg-black border-4 border-willow-emerald rounded-md"></div>
-                    <div className="w-4 h-4 bg-willow-gold rounded-sm"></div>
-                  </div>
-                </div>
-
-                <div className="absolute inset-x-2 h-1 bg-gradient-to-r from-transparent via-willow-neon to-transparent animate-pulse-fast shadow-glow-neon"></div>
+              <div className="flex items-center justify-center gap-2 p-1 rounded-xl bg-willow-850 max-w-[220px] mx-auto border border-slate-700">
+                <button
+                  onClick={() => setPassViewMode('barcode')}
+                  className={`flex-1 py-1 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    passViewMode === 'barcode'
+                      ? 'bg-willow-emerald text-black shadow-glow-emerald font-black'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Barcode className="w-3.5 h-3.5" />
+                  <span>Bar Code</span>
+                </button>
+                <button
+                  onClick={() => setPassViewMode('qr')}
+                  className={`flex-1 py-1 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                    passViewMode === 'qr'
+                      ? 'bg-willow-emerald text-black shadow-glow-emerald font-black'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>QR Code</span>
+                </button>
               </div>
+
+              {passViewMode === 'barcode' ? (
+                <BarcodeDisplay token={tokenToDisplay} />
+              ) : (
+                <QRCodeDisplay token={tokenToDisplay} />
+              )}
 
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-willow-emerald/20 text-willow-neon font-mono text-xs font-bold border border-willow-emerald/40">
                   <Clock className="w-3.5 h-3.5 animate-spin-slow" />
-                  <span>Rolling Token: {currentRollingHash}</span>
+                  <span>Rolling Token: {tokenToDisplay}</span>
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1.5">
-                  Regenerates every 30s ({secondsRemaining}s left) • Screenshots will be rejected at the turnstile.
+                  Regenerates every 30s ({secondsRemaining}s left) • Official turnstile gate verification.
                 </p>
               </div>
 
@@ -105,9 +224,9 @@ export const DynamicTicketPass: React.FC<DynamicTicketPassProps> = ({ booking })
               <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 mx-auto flex items-center justify-center">
                 <Lock className="w-7 h-7" />
               </div>
-              <h4 className="text-sm font-bold text-white">Dynamic QR Pass Locked</h4>
+              <h4 className="text-sm font-bold text-white">Dynamic Barcode Locked</h4>
               <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                To prevent black-market ticket hoarding & static image reselling, your scannable rolling QR will automatically unlock exactly <span className="text-white font-bold">1 hour before the match gate opens</span>.
+                Your scannable rolling barcode will automatically unlock <span className="text-white font-bold">1 hour before match gate opening</span>.
               </p>
             </div>
           )}
@@ -141,3 +260,4 @@ export const DynamicTicketPass: React.FC<DynamicTicketPassProps> = ({ booking })
     </div>
   );
 };
+
