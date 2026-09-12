@@ -17,7 +17,8 @@ import {
   AlertTriangle,
   RefreshCw,
   Trash2,
-  Clock
+  Clock,
+  X
 } from 'lucide-react';
 
 interface AdminPageProps {
@@ -58,6 +59,25 @@ export const AdminPage: React.FC<AdminPageProps> = () => {
 
   const [selectedMatchForPricing, setSelectedMatchForPricing] = useState<Match | null>(null);
   const [emailSendingId, setEmailSendingId] = useState<string | null>(null);
+
+  // Email Composer State
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
+  const [emailRecipient, setEmailRecipient] = useState('fan@gmail.com');
+  const [emailSubject, setEmailSubject] = useState('🎟️ Official Match Pass Confirmation');
+  const [emailContent, setEmailContent] = useState('Your stadium entry barcode pass has been confirmed. Please present your pass at Turnstile #04 for admission.');
+  const [emailBookingId, setEmailBookingId] = useState<string | undefined>(undefined);
+
+  const openEmailComposer = (recipient: string, bookingId?: string, matchTitle?: string) => {
+    setEmailRecipient(recipient);
+    setEmailBookingId(bookingId);
+    if (matchTitle) {
+      setEmailSubject(`🎟️ Official Match Pass: ${matchTitle}`);
+      setEmailContent(`Dear Fan,\n\nYour tickets for ${matchTitle} are confirmed.\nYour official barcode pass is now ready in your Pass Vault.\n\nSee you at the stadium!`);
+    } else {
+      setEmailSubject('🎟️ Willow Stadium Official Ticket Notice');
+    }
+    setEmailModalOpen(true);
+  };
 
   const loadAdminData = async () => {
     setLoading(true);
@@ -504,11 +524,20 @@ export const AdminPage: React.FC<AdminPageProps> = () => {
                   </p>
                 </div>
 
-                <div className="text-left md:text-right">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase">Pre-Saved Family List:</p>
-                  <p className="text-xs text-willow-emerald font-mono font-bold">
-                    {usr.savedFans ? usr.savedFans.length : 0} / 4 Members Pre-Saved
-                  </p>
+                <div className="flex items-center gap-3">
+                  <div className="text-left md:text-right">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase">Pre-Saved Family List:</p>
+                    <p className="text-xs text-willow-emerald font-mono font-bold">
+                      {usr.savedFans ? usr.savedFans.length : 0} / 4 Members Pre-Saved
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => openEmailComposer(usr.email, undefined, 'Special Match Fixture Update')}
+                    className="px-3.5 py-2 rounded-xl bg-willow-800 hover:bg-willow-emerald hover:text-black text-slate-200 text-xs font-bold border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Send Email</span>
+                  </button>
                 </div>
               </div>
             ))}
@@ -518,41 +547,175 @@ export const AdminPage: React.FC<AdminPageProps> = () => {
 
       {activeTab === 'email-dispatch' && (
         <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 space-y-6">
-          <div className="border-b border-slate-800 pb-4">
-            <h3 className="text-lg font-black text-white flex items-center gap-2">
-              <Mail className="w-5 h-5 text-willow-emerald" /> Digital Pass Email Dispatcher
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Dispatch dynamic rolling QR passes directly to verified fan email inboxes with 1 click.
-            </p>
+          <div className="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-black text-white flex items-center gap-2">
+                <Mail className="w-5 h-5 text-willow-emerald" /> Digital Pass Email Dispatcher
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Dispatch dynamic stadium barcode passes directly to fan email inboxes with 1 click.
+              </p>
+            </div>
+
+            <button
+              onClick={() => openEmailComposer('fan@gmail.com', undefined, 'ICC Champions Trophy 2026')}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-willow-emerald to-teal-400 text-black font-black text-xs shadow-glow-emerald hover:brightness-110 flex items-center gap-2 cursor-pointer shrink-0"
+            >
+              <Send className="w-4 h-4" />
+              <span>Compose Custom Email</span>
+            </button>
           </div>
 
-          <div className="space-y-4">
-            {allBookings.map((b) => (
-              <div key={b.id} className="p-5 rounded-2xl bg-willow-850 border border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold text-willow-neon">{b.id}</span>
-                    <span className="px-2 py-0.5 rounded-full bg-willow-emerald/20 text-willow-emerald text-[10px] font-bold">
-                      {b.status}
-                    </span>
-                  </div>
-                  <h4 className="text-sm font-bold text-white">{b.matchTitle}</h4>
-                  <p className="text-xs text-slate-400 font-mono">
-                    Recipient: <span className="text-slate-200 font-bold">{b.userEmail}</span> ({b.seats.length} Seats)
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => handleSendEmail(b.id, b.userEmail)}
-                  disabled={emailSendingId === b.id}
-                  className="px-5 py-2.5 rounded-xl bg-willow-emerald text-black font-black text-xs shadow-glow-emerald hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>{emailSendingId === b.id ? 'Dispatching...' : 'Send Pass via Email'}</span>
-                </button>
+          {allBookings.length === 0 ? (
+            <div className="p-8 text-center space-y-4 rounded-2xl bg-willow-850/60 border border-slate-800">
+              <div className="w-12 h-12 rounded-2xl bg-willow-850 border border-slate-700 text-slate-400 mx-auto flex items-center justify-center">
+                <Mail className="w-6 h-6 text-slate-500" />
               </div>
-            ))}
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                No active bookings made yet. You can still test dispatching custom tickets or notifications to any fan email.
+              </p>
+              <button
+                onClick={() => openEmailComposer('fan@gmail.com', undefined, 'ICC Champions Trophy 2026')}
+                className="px-5 py-2.5 rounded-xl bg-willow-emerald text-black font-black text-xs shadow-glow-emerald hover:brightness-110 cursor-pointer"
+              >
+                Send Test Email to Fan
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {allBookings.map((b) => (
+                <div key={b.id} className="p-5 rounded-2xl bg-willow-850 border border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono font-bold text-willow-neon">{b.id}</span>
+                      <span className="px-2 py-0.5 rounded-full bg-willow-emerald/20 text-willow-emerald text-[10px] font-bold">
+                        {b.status}
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-bold text-white">{b.matchTitle}</h4>
+                    <p className="text-xs text-slate-400 font-mono">
+                      Recipient: <span className="text-slate-200 font-bold">{b.userEmail}</span> ({b.seats.length} Seats)
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => openEmailComposer(b.userEmail, b.id, b.matchTitle)}
+                      className="px-3.5 py-2 rounded-xl bg-willow-800 hover:bg-slate-700 text-white text-xs font-bold border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Customize</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleSendEmail(b.id, b.userEmail)}
+                      disabled={emailSendingId === b.id}
+                      className="px-5 py-2.5 rounded-xl bg-willow-emerald text-black font-black text-xs shadow-glow-emerald hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      <span>{emailSendingId === b.id ? 'Dispatching...' : 'Send Barcode Pass'}</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Direct Email Composer Modal */}
+      {emailModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-lg glass-modal rounded-3xl p-6 sm:p-8 border border-willow-emerald/40 shadow-2xl text-white space-y-4 animate-in zoom-in duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-willow-emerald/20 text-willow-neon border border-willow-emerald/30">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <h3 className="text-base font-black">Send Email to Fan</h3>
+              </div>
+              <button
+                onClick={() => setEmailModalOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-left">
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                  Recipient Email Address
+                </label>
+                <input
+                  type="email"
+                  value={emailRecipient}
+                  onChange={(e) => setEmailRecipient(e.target.value)}
+                  placeholder="e.g. fan@gmail.com"
+                  className="w-full px-3.5 py-2 rounded-xl bg-willow-900 border border-slate-700 text-xs text-white font-mono focus:border-willow-emerald focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                  Email Subject
+                </label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Subject line"
+                  className="w-full px-3.5 py-2 rounded-xl bg-willow-900 border border-slate-700 text-xs text-white focus:border-willow-emerald focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-300 mb-1">
+                  Message & Match Ticket Details
+                </label>
+                <textarea
+                  rows={4}
+                  value={emailContent}
+                  onChange={(e) => setEmailContent(e.target.value)}
+                  className="w-full p-3 rounded-xl bg-willow-900 border border-slate-700 text-xs text-slate-200 focus:border-willow-emerald focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setEmailModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setEmailSendingId('custom');
+                  try {
+                    const res = await api.sendTicketEmail({
+                      bookingId: emailBookingId,
+                      recipientEmail: emailRecipient,
+                      subject: emailSubject,
+                      message: emailContent
+                    });
+                    if (res.success) {
+                      setMessage({ type: 'success', text: res.message });
+                      setEmailModalOpen(false);
+                    }
+                  } catch (err) {
+                    setMessage({ type: 'error', text: 'Failed to dispatch email' });
+                  } finally {
+                    setEmailSendingId(null);
+                  }
+                }}
+                disabled={emailSendingId === 'custom'}
+                className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-willow-emerald via-emerald-500 to-teal-400 text-black font-black text-xs shadow-glow-emerald hover:brightness-110 flex items-center gap-2 cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>{emailSendingId === 'custom' ? 'Sending Email...' : 'Send Email Now'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

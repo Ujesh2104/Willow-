@@ -151,11 +151,15 @@ export const api = {
     return res.json();
   },
 
-  async sendTicketEmail(bookingId: string, recipientEmail?: string): Promise<{ success: boolean; message: string }> {
+  async sendTicketEmail(payload: { bookingId?: string; recipientEmail?: string; subject?: string; message?: string } | string, recipientEmail?: string): Promise<{ success: boolean; message: string }> {
+    const body = typeof payload === 'string' 
+      ? { bookingId: payload, recipientEmail } 
+      : payload;
+
     const res = await fetch(`${API_BASE_URL}/admin/send-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bookingId, recipientEmail })
+      body: JSON.stringify(body)
     });
     return res.json();
   }

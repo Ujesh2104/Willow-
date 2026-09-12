@@ -93,20 +93,33 @@ export const getAllUsers = (req, res) => {
 };
 
 export const sendTicketEmail = (req, res) => {
-  const { bookingId, recipientEmail } = req.body;
+  const { bookingId, recipientEmail, subject, message } = req.body;
 
-  const booking = DB.bookings.find((b) => b.id === bookingId);
-  if (!booking) {
-    return res.status(404).json({ success: false, message: 'Booking not found' });
+  let booking = null;
+  if (bookingId) {
+    booking = DB.bookings.find((b) => b.id === bookingId);
   }
 
-  const targetEmail = recipientEmail || booking.userEmail;
+  const targetEmail = recipientEmail || (booking ? booking.userEmail : null);
+  if (!targetEmail) {
+    return res.status(400).json({ success: false, message: 'Recipient email is required' });
+  }
+
+  const dispatchDetails = {
+    bookingId: booking ? booking.id : 'CUSTOM_PASS',
+    matchTitle: booking ? booking.matchTitle : 'Willow Match Pass',
+    recipient: targetEmail,
+    seats: booking ? booking.seats.map((s) => `${s.standName} (Row ${s.row} Seat #${s.number})`).join(', ') : 'N/A',
+    subject: subject || (booking ? `🎟️ Official Stadium Pass: ${booking.matchTitle}` : 'Willow Stadium Notification'),
+    message: message || 'Your official stadium barcode pass is confirmed.',
+    timestamp: new Date().toISOString()
+  };
 
   res.json({
     success: true,
-    message: `✉️ Digital Match Pass #${booking.id} dispatched to ${targetEmail} with Dynamic Rolling QR Pass.`,
+    message: `✉️ Match Ticket Pass dispatched successfully to ${targetEmail}!`,
     dispatchedTo: targetEmail,
-    timestamp: new Date().toISOString()
+    details: dispatchDetails
   });
 };
 

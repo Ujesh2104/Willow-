@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Booking } from '../types';
 import { useBooking } from '../context/BookingContext';
-import { ShieldCheck, Lock, Clock, MapPin, CheckCircle2, Barcode, QrCode } from 'lucide-react';
+import { ShieldCheck, Lock, Clock, MapPin, CheckCircle2, Barcode } from 'lucide-react';
 
 interface DynamicTicketPassProps {
   booking: Booking;
@@ -9,103 +9,53 @@ interface DynamicTicketPassProps {
 
 const BarcodeDisplay: React.FC<{ token: string }> = ({ token }) => {
   const bars = useMemo(() => {
-    const list: { width: number; isSpace: boolean }[] = [];
-    list.push({ width: 3, isSpace: false }, { width: 1, isSpace: true }, { width: 2, isSpace: false }, { width: 2, isSpace: true });
+    const list: { width: number; isBlack: boolean }[] = [];
+    
+    // Start Guard Bars
+    list.push({ width: 3, isBlack: true }, { width: 2, isBlack: false }, { width: 2, isBlack: true }, { width: 2, isBlack: false });
     
     for (let i = 0; i < token.length; i++) {
       const code = token.charCodeAt(i);
       const b1 = (code % 3) + 1;
-      const b2 = ((code >> 1) % 3) + 1;
+      const b2 = ((code >> 1) % 2) + 1;
       const b3 = ((code >> 2) % 3) + 1;
       const b4 = ((code >> 3) % 2) + 1;
-      list.push({ width: b1, isSpace: false });
-      list.push({ width: b2, isSpace: true });
-      list.push({ width: b3, isSpace: false });
-      list.push({ width: b4, isSpace: true });
+      list.push({ width: b1, isBlack: true });
+      list.push({ width: b2, isBlack: false });
+      list.push({ width: b3, isBlack: true });
+      list.push({ width: b4, isBlack: false });
     }
     
-    list.push({ width: 2, isSpace: false }, { width: 2, isSpace: true }, { width: 3, isSpace: false });
+    // End Guard Bars
+    list.push({ width: 2, isBlack: true }, { width: 2, isBlack: false }, { width: 3, isBlack: true }, { width: 2, isBlack: false }, { width: 2, isBlack: true });
     return list;
   }, [token]);
 
   return (
-    <div className="bg-white p-4 rounded-2xl shadow-glow-emerald relative overflow-hidden flex flex-col items-center justify-center space-y-2">
-      <div className="w-full flex items-center justify-center overflow-hidden py-1">
-        <svg className="w-full h-20 max-h-24" viewBox="0 0 340 70" preserveAspectRatio="none">
-          {(() => {
-            let posX = 12;
-            return bars.map((bar, index) => {
-              const currentX = posX;
-              posX += bar.width * 2.1;
-              if (bar.isSpace) return null;
-              return <rect key={index} x={currentX} y="4" width={bar.width * 1.8} height="62" fill="#030706" rx="0.5" />;
-            });
-          })()}
-        </svg>
-      </div>
+    <div className="bg-white p-5 rounded-2xl shadow-glow-emerald flex flex-col items-center justify-center space-y-3 relative overflow-hidden w-full border-2 border-slate-900">
       
-      <div className="font-mono text-xs sm:text-sm font-black tracking-widest text-slate-900 border-t border-slate-200 pt-1 w-full text-center">
-        ||| {token} |||
+      {/* Laser Scanning Beam Animation */}
+      <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent animate-pulse shadow-glow-emerald top-1/2 -translate-y-1/2 pointer-events-none z-10"></div>
+
+      {/* Solid Black Barcode Stripes */}
+      <div className="flex items-stretch justify-center h-24 sm:h-28 w-full max-w-[340px] px-2 bg-white overflow-hidden">
+        {bars.map((bar, idx) => (
+          <div
+            key={idx}
+            style={{
+              width: `${bar.width * 2.5}px`,
+              backgroundColor: bar.isBlack ? '#000000' : '#FFFFFF',
+              height: '100%'
+            }}
+            className="shrink-0"
+          />
+        ))}
       </div>
 
-      <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent animate-pulse shadow-glow-emerald top-1/2 -translate-y-1/2"></div>
-    </div>
-  );
-};
-
-const QRCodeDisplay: React.FC<{ token: string }> = ({ token }) => {
-  const grid = useMemo(() => {
-    const size = 15;
-    const matrix: boolean[][] = Array(size).fill(false).map(() => Array(size).fill(false));
-    
-    const setCorner = (r: number, c: number) => {
-      for (let i = 0; i < 4; i++) {
-        for (let j = 0; j < 4; j++) {
-          if (i === 0 || i === 3 || j === 0 || j === 3) {
-            matrix[r + i][c + j] = true;
-          } else if (i === 1 && j === 1) {
-            matrix[r + i][c + j] = false;
-          } else {
-            matrix[r + i][c + j] = true;
-          }
-        }
-      }
-    };
-
-    setCorner(0, 0);
-    setCorner(0, size - 4);
-    setCorner(size - 4, 0);
-
-    for (let r = 0; r < size; r++) {
-      for (let c = 0; c < size; c++) {
-        if ((r < 4 && c < 4) || (r < 4 && c >= size - 4) || (r >= size - 4 && c < 4)) continue;
-        const hash = (token.charCodeAt((r * size + c) % token.length) + r * 7 + c * 11) % 5;
-        matrix[r][c] = hash <= 2;
-      }
-    }
-    return matrix;
-  }, [token]);
-
-  return (
-    <div className="bg-white p-4 rounded-2xl shadow-glow-emerald relative overflow-hidden flex flex-col items-center justify-center space-y-2">
-      <div className="p-2 bg-white rounded-xl">
-        <div className="grid grid-cols-15 gap-0.5 w-40 h-40">
-          {grid.map((row, r) =>
-            row.map((cell, c) => (
-              <div
-                key={`${r}-${c}`}
-                className={`${cell ? 'bg-slate-950' : 'bg-transparent'} rounded-[1px]`}
-              />
-            ))
-          )}
-        </div>
+      {/* Human Readable Token Text */}
+      <div className="font-mono text-xs sm:text-sm font-black tracking-widest text-black border-t-2 border-slate-900 pt-2 w-full text-center">
+        * {token} *
       </div>
-
-      <div className="font-mono text-[11px] font-bold text-slate-800 tracking-wider">
-        {token}
-      </div>
-
-      <div className="absolute inset-x-2 h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent animate-pulse shadow-glow-emerald top-1/2 -translate-y-1/2"></div>
     </div>
   );
 };
@@ -113,7 +63,6 @@ const QRCodeDisplay: React.FC<{ token: string }> = ({ token }) => {
 export const DynamicTicketPass: React.FC<DynamicTicketPassProps> = ({ booking }) => {
   const { currentRollingHash } = useBooking();
   const [secondsRemaining, setSecondsRemaining] = useState<number>(30);
-  const [passViewMode, setPassViewMode] = useState<'barcode' | 'qr'>('barcode');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -177,36 +126,12 @@ export const DynamicTicketPass: React.FC<DynamicTicketPassProps> = ({ booking })
           {booking.isPassUnlocked ? (
             <div className="space-y-4">
               
-              <div className="flex items-center justify-center gap-2 p-1 rounded-xl bg-willow-850 max-w-[220px] mx-auto border border-slate-700">
-                <button
-                  onClick={() => setPassViewMode('barcode')}
-                  className={`flex-1 py-1 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    passViewMode === 'barcode'
-                      ? 'bg-willow-emerald text-black shadow-glow-emerald font-black'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <Barcode className="w-3.5 h-3.5" />
-                  <span>Bar Code</span>
-                </button>
-                <button
-                  onClick={() => setPassViewMode('qr')}
-                  className={`flex-1 py-1 px-2.5 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                    passViewMode === 'qr'
-                      ? 'bg-willow-emerald text-black shadow-glow-emerald font-black'
-                      : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  <QrCode className="w-3.5 h-3.5" />
-                  <span>QR Code</span>
-                </button>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-willow-800 text-xs font-bold text-slate-200 border border-slate-700">
+                <Barcode className="w-4 h-4 text-willow-emerald" />
+                <span>Official Scannable Barcode</span>
               </div>
 
-              {passViewMode === 'barcode' ? (
-                <BarcodeDisplay token={tokenToDisplay} />
-              ) : (
-                <QRCodeDisplay token={tokenToDisplay} />
-              )}
+              <BarcodeDisplay token={tokenToDisplay} />
 
               <div>
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-willow-emerald/20 text-willow-neon font-mono text-xs font-bold border border-willow-emerald/40">
@@ -214,7 +139,7 @@ export const DynamicTicketPass: React.FC<DynamicTicketPassProps> = ({ booking })
                   <span>Rolling Token: {tokenToDisplay}</span>
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1.5">
-                  Regenerates every 30s ({secondsRemaining}s left) • Official turnstile gate verification.
+                  Regenerates every 30s ({secondsRemaining}s left) • Official turnstile gate barcode verification.
                 </p>
               </div>
 
