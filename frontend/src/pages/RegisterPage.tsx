@@ -53,8 +53,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({
     <div className="max-w-md mx-auto px-4 py-8 text-white space-y-6">
       
       <div className="text-center space-y-2">
-        <div className="w-14 h-14 rounded-2xl bg-willow-emerald/20 border border-willow-emerald/40 text-willow-neon mx-auto flex items-center justify-center text-2xl shadow-glow-emerald">
-          🏏
+        <div className="w-16 h-16 rounded-2xl p-0.5 border border-willow-emerald/40 mx-auto flex items-center justify-center shadow-glow-emerald overflow-hidden bg-black">
+          <img src="/images/willow_logo.jpg" alt="Willow Logo" className="w-full h-full object-cover rounded-xl" />
         </div>
         <h2 className="text-2xl sm:text-3xl font-black tracking-tight">Create Fan Account</h2>
         <p className="text-xs text-slate-400">

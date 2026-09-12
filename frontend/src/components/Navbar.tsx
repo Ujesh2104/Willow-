@@ -35,10 +35,12 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={handleLogoClick} 
           className="flex items-center gap-2.5 sm:gap-3.5 cursor-pointer group"
         >
-          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-willow-emerald to-emerald-800 p-0.5 shadow-glow-emerald flex items-center justify-center transition-transform group-hover:scale-105 shrink-0">
-            <div className="w-full h-full bg-willow-900 rounded-[10px] flex items-center justify-center">
-              <span className="text-xl sm:text-2xl">🏏</span>
-            </div>
+          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl p-0.5 shadow-glow-emerald flex items-center justify-center transition-transform group-hover:scale-105 shrink-0 overflow-hidden border border-willow-emerald/40 bg-black">
+            <img 
+              src="/images/willow_logo.jpg" 
+              alt="Willow Cricket Logo" 
+              className="w-full h-full object-cover rounded-[10px]"
+            />
           </div>
           <div>
             <div className="flex items-center gap-1.5 sm:gap-2">
