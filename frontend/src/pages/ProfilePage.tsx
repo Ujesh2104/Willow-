@@ -77,7 +77,7 @@ export const ProfilePage: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-lg font-black text-white">Pre-Saved Fan Master List (IRCTC-Style)</h3>
+              <h3 className="text-lg font-black text-white">Pre-Saved Fan Master List</h3>
               <span className="px-2.5 py-0.5 rounded-full bg-willow-emerald/20 text-willow-neon text-xs font-bold font-mono">
                 {user.savedFans.length} / 4 Saved
               </span>

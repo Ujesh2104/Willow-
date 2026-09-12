@@ -39,7 +39,7 @@
 * Tickets feature rotating timestamp-hashed tokens that activate prior to the match, preventing static screenshot sharing and turnstile fraud.
 * Equipped with an interactive **Gatekeeper Turnstile Terminal** for stadium gate staff to scan and admit fans with duplicate-attempt detection.
 
-### 5. 👥 Pre-Saved Master Fan List (IRCTC-Style)
+### 5. 👥 Pre-Saved Attendee Master List
 * Fans can pre-save up to 4 family members or friends (Name, Age, Gender, Govt ID).
 * During high-demand match checkouts, passenger details are auto-filled with a single click, allowing genuine fans to complete bookings in seconds.
 

@@ -84,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const saveFan = async (fanData: Omit<SavedFan, 'id'>): Promise<boolean> => {
     if (!user) return false;
     if (user.savedFans && user.savedFans.length >= 4) {
-      alert('IRCTC-Style Rule: You can pre-save a maximum of 4 fans in your profile.');
+      alert('Limit Exceeded: You can pre-save a maximum of 4 fans in your profile.');
       return false;
     }
     const newFan: SavedFan = {

@@ -111,7 +111,7 @@ export const updateSavedFans = (req, res) => {
   if (fans && fans.length > 4) {
     return res.status(400).json({
       success: false,
-      message: 'IRCTC Rule: Maximum 4 fans allowed in pre-saved master list.'
+      message: 'Maximum 4 attendees allowed in pre-saved master list.'
     });
   }
 
