@@ -18,10 +18,31 @@ const getBaseUrl = (): string => {
 
 const API_BASE_URL = getBaseUrl();
 
+const getAuthHeaders = (): Record<string, string> => {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  try {
+    const token = localStorage.getItem('willow_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  } catch (e) {
+    // Ignore localStorage access issues
+  }
+  return headers;
+};
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const primaryUrl = `${API_BASE_URL}${path}`;
+  const mergedOptions: RequestInit = {
+    ...options,
+    headers: {
+      ...getAuthHeaders(),
+      ...(options?.headers || {})
+    }
+  };
+
   try {
-    const res = await fetch(primaryUrl, options);
+    const res = await fetch(primaryUrl, mergedOptions);
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
       const data = await res.json();
@@ -34,7 +55,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     if (API_BASE_URL !== DEFAULT_REMOTE_API) {
       try {
         const fallbackUrl = `${DEFAULT_REMOTE_API}${path}`;
-        const res = await fetch(fallbackUrl, options);
+        const res = await fetch(fallbackUrl, mergedOptions);
         const contentType = res.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
           const data = await res.json();
@@ -80,26 +101,41 @@ export const api = {
     }
   },
 
-  async login(email: string): Promise<{ success: boolean; user: User; message?: string }> {
-    return request<{ success: boolean; user: User; message?: string }>('/auth/login', {
+  async login(email: string, password?: string): Promise<{ success: boolean; token?: string; user: User; message?: string }> {
+    return request<{ success: boolean; token?: string; user: User; message?: string }>('/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email, password })
     });
   },
 
-  async register(name: string, email: string, phone: string): Promise<{ success: boolean; user?: User; message?: string }> {
-    return request<{ success: boolean; user?: User; message?: string }>('/auth/register', {
+  async register(name: string, email: string, phone: string, password?: string): Promise<{ success: boolean; token?: string; user?: User; message?: string }> {
+    return request<{ success: boolean; token?: string; user?: User; message?: string }>('/auth/register', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, phone })
+      body: JSON.stringify({ name, email, phone, password })
+    });
+  },
+
+  async logout(email?: string, token?: string): Promise<{ success: boolean; message: string }> {
+    try {
+      return await request<{ success: boolean; message: string }>('/auth/logout', {
+        method: 'POST',
+        body: JSON.stringify({ email, token })
+      });
+    } catch (e) {
+      return { success: true, message: 'Logged out locally' };
+    }
+  },
+
+  async verifyToken(token: string): Promise<{ success: boolean; valid?: boolean; user?: User; message?: string }> {
+    return request<{ success: boolean; valid?: boolean; user?: User; message?: string }>('/auth/verify-token', {
+      method: 'POST',
+      body: JSON.stringify({ token })
     });
   },
 
   async updateSavedFans(email: string, fans: SavedFan[]): Promise<{ success: boolean; savedFans: SavedFan[] }> {
     return request<{ success: boolean; savedFans: SavedFan[] }>('/auth/fans', {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, fans })
     });
   },
@@ -107,7 +143,6 @@ export const api = {
   async lockSeats(seatIds: string[], userId: string, matchId: string, standId: string): Promise<{ success: boolean; expiresAt: number; ttlSeconds: number; message?: string }> {
     return request<{ success: boolean; expiresAt: number; ttlSeconds: number; message?: string }>('/bookings/lock', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ seatIds, userId, matchId, standId })
     });
   },
@@ -115,7 +150,6 @@ export const api = {
   async releaseSeats(seatIds: string[]): Promise<{ success: boolean }> {
     return request<{ success: boolean }>('/bookings/release', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ seatIds })
     });
   },
@@ -129,7 +163,6 @@ export const api = {
   }): Promise<{ success: boolean; booking: Booking; message?: string }> {
     return request<{ success: boolean; booking: Booking; message?: string }>('/bookings/create', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(bookingData)
     });
   },
@@ -146,7 +179,6 @@ export const api = {
   async validateGatePass(qrToken: string): Promise<{ success: boolean; valid: boolean; booking?: Booking; message: string }> {
     return request<{ success: boolean; valid: boolean; booking?: Booking; message: string }>('/bookings/validate-gate', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ qrToken })
     });
   },
@@ -164,7 +196,6 @@ export const api = {
   async createMatch(matchData: any): Promise<{ success: boolean; match: Match; message?: string }> {
     return request<{ success: boolean; match: Match; message?: string }>('/admin/matches', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(matchData)
     });
   },
@@ -178,7 +209,6 @@ export const api = {
   async updateMatchStands(matchId: string, payload: { venue?: string; city?: string; stands?: Stand[] }): Promise<{ success: boolean; match: Match; message?: string }> {
     return request<{ success: boolean; match: Match; message?: string }>(`/admin/matches/${matchId}/stands`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
   },
@@ -190,7 +220,6 @@ export const api = {
 
     return request<{ success: boolean; message: string }>('/admin/send-email', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
     });
   }

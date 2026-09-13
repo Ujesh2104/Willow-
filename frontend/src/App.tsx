@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { BookingProvider, useBooking } from './context/BookingContext';
 import { Navbar } from './components/Navbar';
@@ -10,11 +10,37 @@ import { AdminPage } from './pages/AdminPage';
 import { Clock, Smartphone } from 'lucide-react';
 
 const MainApp: React.FC = () => {
-  const [currentView, setCurrentView] = useState<string>('home');
-  const [justRegisteredMsg, setJustRegisteredMsg] = useState<string | null>(null);
-
   const { isAuthenticated, user, duplicateSessionAlert, clearDuplicateAlert } = useAuth();
   const { lockExpiredModal, closeLockExpiredModal } = useBooking();
+
+  const [currentView, setCurrentViewState] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('willow_current_view');
+      const userRaw = localStorage.getItem('willow_active_user');
+      if (saved && userRaw) {
+        return saved;
+      }
+    } catch {}
+    return 'home';
+  });
+
+  const [justRegisteredMsg, setJustRegisteredMsg] = useState<string | null>(null);
+
+  const setCurrentView = (view: string) => {
+    setCurrentViewState(view);
+    try {
+      localStorage.setItem('willow_current_view', view);
+    } catch {}
+  };
+
+  // Keep view in sync when authentication status changes
+  useEffect(() => {
+    if (!isAuthenticated) {
+      if (currentView === 'dashboard' || currentView === 'admin') {
+        setCurrentView('home');
+      }
+    }
+  }, [isAuthenticated]);
 
   const handleRegisterSuccess = () => {
     setJustRegisteredMsg('🎉 Fan Account verified successfully! Please log in to access the stadium drop portal.');
@@ -90,7 +116,7 @@ const MainApp: React.FC = () => {
             <span>•</span>
             <span>3-Min Concurrency Lock</span>
             <span>•</span>
-            <span>Rolling Dynamic QR Pass</span>
+            <span>Rolling Dynamic Barcode Pass</span>
           </div>
         </div>
       </footer>

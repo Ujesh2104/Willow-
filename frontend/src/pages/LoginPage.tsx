@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Mail, Lock, CheckCircle2, AlertTriangle, ArrowRight, User, Settings } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, CheckCircle2, AlertTriangle, ArrowRight, User, Settings, KeyRound } from 'lucide-react';
 
 interface LoginPageProps {
   onLoginSuccess: (role: 'fan' | 'admin') => void;
@@ -24,7 +24,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setError('');
 
     if (!email) {
-      setError('Please enter your email.');
+      setError('Please enter your email address.');
+      return;
+    }
+
+    if (!password) {
+      setError('Please enter your account password.');
       return;
     }
 
@@ -34,16 +39,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       setLoading(false);
 
       if (res.success) {
-        const isEmailAdmin = email.trim().toLowerCase().includes('admin');
-        const role = isEmailAdmin ? 'admin' : 'fan';
+        const isAdmin = res.user?.role === 'admin' || email.trim().toLowerCase() === 'admin@willow.com';
+        const role = isAdmin ? 'admin' : 'fan';
         onLoginSuccess(role);
       } else {
-        setError(res.message || 'Login failed.');
+        setError(res.message || 'Login failed. Please check your credentials.');
       }
     } catch (err: any) {
       setError(err.message || 'Server error during login.');
       setLoading(false);
     }
+  };
+
+  const fillAdminCredentials = () => {
+    setEmail('admin@willow.com');
+    setPassword('admin123');
+    setError('');
   };
 
   return (
@@ -69,7 +80,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       <div className="glass-modal rounded-3xl p-6 sm:p-8 border border-willow-emerald/30 shadow-2xl space-y-5">
         
         {error && (
-          <div className="p-3.5 rounded-xl bg-red-950/80 border border-red-500/50 text-red-300 text-xs flex items-center gap-2">
+          <div className="p-3.5 rounded-xl bg-red-950/80 border border-red-500/50 text-red-300 text-xs flex items-center gap-2 animate-in fade-in">
             <AlertTriangle className="w-4 h-4 text-red-400 shrink-0" />
             <span>{error}</span>
           </div>
@@ -94,9 +105,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-              Password
-            </label>
+            <div className="flex justify-between items-center mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                Password
+              </label>
+            </div>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
@@ -115,10 +128,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             className="w-full py-3.5 rounded-xl bg-gradient-to-r from-willow-emerald via-emerald-500 to-teal-400 text-black font-black text-sm shadow-glow-emerald hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
           >
             <ShieldCheck className="w-4 h-4" />
-            <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
+            <span>{loading ? 'Authenticating Session...' : 'Sign In'}</span>
           </button>
 
         </form>
+
+        <div className="pt-2 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={fillAdminCredentials}
+            className="w-full py-2 px-3 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/30 text-purple-300 text-[11px] font-mono flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+            <span>Fill Admin Credentials (admin@willow.com)</span>
+          </button>
+        </div>
 
         <div className="text-center pt-3 text-xs text-slate-400 border-t border-slate-800">
           New fan?{' '}

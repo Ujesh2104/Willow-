@@ -12,6 +12,10 @@ export interface User {
   name: string;
   email: string;
   phone: string;
+  role?: 'admin' | 'fan';
+  token?: string;
+  tokenExpiresAt?: number;
+  password?: string;
   govIdHash?: string;
   currentSessionId: string;
   savedFans: SavedFan[];

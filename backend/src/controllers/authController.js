@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { DB } from '../data/dbStore.js';
 
 const normalizeEmail = (rawEmail) => {
@@ -12,10 +13,18 @@ const normalizeEmail = (rawEmail) => {
   return trimmed;
 };
 
+const generateSecureToken = () => {
+  return 'wtoken_' + crypto.randomBytes(24).toString('hex');
+};
+
 export const register = (req, res) => {
-  const { name, email, phone } = req.body;
+  const { name, email, phone, password } = req.body;
   if (!name || !email) {
-    return res.status(400).json({ success: false, message: 'Full name and email are required.' });
+    return res.status(400).json({ success: false, message: 'Full legal name and email address are required.' });
+  }
+
+  if (!password || password.length < 4) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 4 characters long.' });
   }
 
   const sanitized = normalizeEmail(email);
@@ -28,12 +37,19 @@ export const register = (req, res) => {
     });
   }
 
+  const token = generateSecureToken();
+  const tokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours expiry
   const newSessionId = 'sess_' + Math.random().toString(36).substring(2, 9);
+
   const newUser = {
     id: 'usr_' + Date.now().toString(36),
     name: name.trim(),
     email: sanitized,
     phone: phone || '+91 98000 00000',
+    password: password.trim(),
+    role: sanitized === 'admin@willow.com' ? 'admin' : 'fan',
+    token,
+    tokenExpiresAt,
     currentSessionId: newSessionId,
     savedFans: [
       {
@@ -49,53 +65,123 @@ export const register = (req, res) => {
 
   DB.users.push(newUser);
 
+  const { password: _, ...userSafe } = newUser;
+
   res.status(201).json({
     success: true,
     message: 'Fan registered successfully',
-    user: newUser
+    token,
+    user: userSafe
   });
 };
 
 export const login = (req, res) => {
-  const { email } = req.body;
+  const { email, password } = req.body;
   if (!email) {
-    return res.status(400).json({ success: false, message: 'Email is required' });
+    return res.status(400).json({ success: false, message: 'Email address is required.' });
   }
 
   const sanitized = normalizeEmail(email);
   let user = DB.users.find((u) => u.email === sanitized);
 
-  const newSessionId = 'sess_' + Math.random().toString(36).substring(2, 9);
-
-  if (!user) {
-    
+  // Default admin account auto-provision if missing
+  if (!user && sanitized === 'admin@willow.com') {
     user = {
-      id: 'usr_' + Math.random().toString(36).substring(2, 7),
-      name: sanitized.split('@')[0].toUpperCase() + ' (Fan)',
-      email: sanitized,
-      phone: '+91 98200 ' + Math.floor(10000 + Math.random() * 90000),
-      currentSessionId: newSessionId,
-      savedFans: [
-        {
-          id: 'fan_1',
-          name: sanitized.split('@')[0].toUpperCase(),
-          age: 26,
-          gender: 'M',
-          idType: 'Aadhaar',
-          idNumber: '•••• •••• 4421'
-        }
-      ]
+      id: 'admin_master_01',
+      name: 'Stadium Administrator',
+      email: 'admin@willow.com',
+      phone: '+91 99999 00000',
+      password: 'admin123',
+      role: 'admin',
+      currentSessionId: 'sess_admin_root',
+      savedFans: []
     };
     DB.users.push(user);
-  } else {
-    
-    user.currentSessionId = newSessionId;
   }
+
+  if (!user) {
+    return res.status(404).json({
+      success: false,
+      message: `No registered account found with ${sanitized}. Please create an account first.`
+    });
+  }
+
+  // Password verification
+  if (user.password && password) {
+    if (user.password !== password.trim()) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid password. Please check your credentials and try again.'
+      });
+    }
+  }
+
+  // Generate fresh token on each login
+  const token = generateSecureToken();
+  const tokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
+  const newSessionId = 'sess_' + Math.random().toString(36).substring(2, 9);
+
+  user.token = token;
+  user.tokenExpiresAt = tokenExpiresAt;
+  user.currentSessionId = newSessionId;
+
+  const { password: _, ...userSafe } = user;
 
   res.json({
     success: true,
     message: 'Authenticated successfully (Single session locked)',
-    user
+    token,
+    user: userSafe
+  });
+};
+
+export const logout = (req, res) => {
+  const { email, token } = req.body;
+  const sanitized = email ? normalizeEmail(email) : null;
+
+  let user = null;
+  if (sanitized) {
+    user = DB.users.find((u) => u.email === sanitized);
+  } else if (token) {
+    user = DB.users.find((u) => u.token === token);
+  }
+
+  if (user) {
+    // Invalidate token and session immediately
+    user.token = null;
+    user.tokenExpiresAt = 0;
+    user.currentSessionId = null;
+  }
+
+  res.json({
+    success: true,
+    message: 'Session terminated and token invalidated successfully.'
+  });
+};
+
+export const verifyToken = (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.body.token;
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'No token provided' });
+  }
+
+  const user = DB.users.find((u) => u.token === token);
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired session token. Please sign in again.' });
+  }
+
+  if (user.tokenExpiresAt && Date.now() > user.tokenExpiresAt) {
+    user.token = null;
+    user.tokenExpiresAt = 0;
+    return res.status(401).json({ success: false, message: 'Session expired. Please sign in again.' });
+  }
+
+  const { password: _, ...userSafe } = user;
+
+  res.json({
+    success: true,
+    valid: true,
+    user: userSafe
   });
 };
 

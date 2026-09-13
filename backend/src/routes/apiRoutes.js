@@ -1,6 +1,6 @@
 import express from 'express';
 import { getAllMatches, getMatchById, getStandSeats } from '../controllers/matchController.js';
-import { register, login, updateSavedFans } from '../controllers/authController.js';
+import { register, login, logout, verifyToken, updateSavedFans } from '../controllers/authController.js';
 import { lockSeats, releaseSeats, createBooking, getUserBookings, validateGatePass } from '../controllers/bookingController.js';
 import { createMatch, deleteMatch, updateMatchStands, getAllUsers, sendTicketEmail, getAdminStats } from '../controllers/adminController.js';
 
@@ -12,6 +12,9 @@ router.get('/matches/:matchId/stands/:standId/seats', getStandSeats);
 
 router.post('/auth/register', register);
 router.post('/auth/login', login);
+router.post('/auth/logout', logout);
+router.get('/auth/verify-token', verifyToken);
+router.post('/auth/verify-token', verifyToken);
 router.put('/auth/fans', updateSavedFans);
 
 router.post('/bookings/lock', lockSeats);

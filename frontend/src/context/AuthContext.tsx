@@ -4,10 +4,11 @@ import { api } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
-  login: (email: string, password?: string) => Promise<{ success: boolean; message?: string }>;
+  login: (email: string, password?: string) => Promise<{ success: boolean; user?: User; message?: string }>;
   register: (name: string, email: string, phone: string, password?: string) => Promise<{ success: boolean; message?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   saveFan: (fan: Omit<SavedFan, 'id'>) => Promise<boolean>;
   removeFan: (id: string) => Promise<void>;
   sanitizeEmail: (email: string) => string;
@@ -33,8 +34,20 @@ export const normalizeEmail = (rawEmail: string): string => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('willow_active_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('willow_active_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('willow_token') || null;
+    } catch {
+      return null;
+    }
   });
 
   const [duplicateSessionAlert, setDuplicateSessionAlert] = useState<boolean>(false);
@@ -47,71 +60,126 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [user]);
 
+  useEffect(() => {
+    if (token) {
+      localStorage.setItem('willow_token', token);
+    } else {
+      localStorage.removeItem('willow_token');
+    }
+  }, [token]);
+
+  // Verify token validity on load
+  useEffect(() => {
+    const checkToken = async () => {
+      const savedToken = localStorage.getItem('willow_token');
+      if (savedToken && user) {
+        try {
+          const res = await api.verifyToken(savedToken);
+          if (res && res.success && res.user) {
+            setUser(res.user);
+          } else if (res && !res.success && res.message?.includes('expired')) {
+            // Token expired, log out gracefully
+            logout();
+          }
+        } catch {
+          // Keep cached user if offline
+        }
+      }
+    };
+    checkToken();
+  }, []);
+
   const sanitizeEmail = (email: string) => normalizeEmail(email);
 
-  const login = async (email: string): Promise<{ success: boolean; message?: string }> => {
+  const login = async (email: string, password?: string): Promise<{ success: boolean; user?: User; message?: string }> => {
     const sanitized = normalizeEmail(email);
     try {
-      const res = await api.login(email);
+      const res = await api.login(email, password);
       if (res && res.success && res.user) {
         setUser(res.user);
+        if (res.token) setToken(res.token);
         setDuplicateSessionAlert(false);
-        return { success: true };
+        return { success: true, user: res.user };
       }
       
-      // Resilient local fallback if server unreachable
-      const storedUsers: User[] = JSON.parse(localStorage.getItem('willow_cached_users') || '[]');
+      // If server explicitly returned validation failure (e.g. invalid password or user not found)
+      if (res && !res.success && res.message) {
+        return { success: false, message: res.message };
+      }
+      
+      // Local fallback
+      const storedUsers: any[] = JSON.parse(localStorage.getItem('willow_cached_users') || '[]');
       const cached = storedUsers.find((u) => u.email === sanitized);
-      const fallbackUser: User = cached || {
-        id: 'usr_' + Date.now().toString(36),
-        name: sanitized.split('@')[0].toUpperCase() + ' (Fan)',
-        email: sanitized,
-        phone: '+91 98200 ' + Math.floor(10000 + Math.random() * 90000),
-        currentSessionId: 'sess_' + Math.random().toString(36).substring(2, 9),
-        savedFans: [
-          {
-            id: 'fan_1',
-            name: sanitized.split('@')[0].toUpperCase(),
-            age: 25,
-            gender: 'M',
-            idType: 'Aadhaar',
-            idNumber: '•••• •••• ' + Math.floor(1000 + Math.random() * 9000)
-          }
-        ]
-      };
-      setUser(fallbackUser);
-      setDuplicateSessionAlert(false);
-      return { success: true };
+      if (cached) {
+        if (cached.password && password && cached.password !== password) {
+          return { success: false, message: 'Invalid password. Please check your credentials.' };
+        }
+        setUser(cached);
+        setToken(cached.token || 'wtoken_local_' + Date.now());
+        setDuplicateSessionAlert(false);
+        return { success: true, user: cached };
+      }
+
+      // Admin account fallback
+      if (sanitized === 'admin@willow.com') {
+        if (password && password !== 'admin123') {
+          return { success: false, message: 'Invalid administrator password.' };
+        }
+        const adminUser: User = {
+          id: 'admin_master_01',
+          name: 'Stadium Administrator',
+          email: 'admin@willow.com',
+          role: 'admin',
+          phone: '+91 99999 00000',
+          currentSessionId: 'sess_admin_root',
+          savedFans: []
+        };
+        setUser(adminUser);
+        setToken('wtoken_admin_root');
+        setDuplicateSessionAlert(false);
+        return { success: true, user: adminUser };
+      }
+
+      return { success: false, message: res?.message || 'No account found with this email. Please register first.' };
     } catch (err: any) {
-      const storedUsers: User[] = JSON.parse(localStorage.getItem('willow_cached_users') || '[]');
+      // Offline fallback check
+      const storedUsers: any[] = JSON.parse(localStorage.getItem('willow_cached_users') || '[]');
       const cached = storedUsers.find((u) => u.email === sanitized);
-      const fallbackUser: User = cached || {
-        id: 'usr_' + Date.now().toString(36),
-        name: sanitized.split('@')[0].toUpperCase() + ' (Fan)',
-        email: sanitized,
-        phone: '+91 98200 ' + Math.floor(10000 + Math.random() * 90000),
-        currentSessionId: 'sess_' + Math.random().toString(36).substring(2, 9),
-        savedFans: [
-          {
-            id: 'fan_1',
-            name: sanitized.split('@')[0].toUpperCase(),
-            age: 25,
-            gender: 'M',
-            idType: 'Aadhaar',
-            idNumber: '•••• •••• ' + Math.floor(1000 + Math.random() * 9000)
-          }
-        ]
-      };
-      setUser(fallbackUser);
-      setDuplicateSessionAlert(false);
-      return { success: true };
+      if (cached) {
+        if (cached.password && password && cached.password !== password) {
+          return { success: false, message: 'Invalid password.' };
+        }
+        setUser(cached);
+        setToken(cached.token || 'wtoken_local_' + Date.now());
+        setDuplicateSessionAlert(false);
+        return { success: true, user: cached };
+      }
+      if (sanitized === 'admin@willow.com') {
+        if (password && password !== 'admin123') {
+          return { success: false, message: 'Invalid administrator password.' };
+        }
+        const adminUser: User = {
+          id: 'admin_master_01',
+          name: 'Stadium Administrator',
+          email: 'admin@willow.com',
+          role: 'admin',
+          phone: '+91 99999 00000',
+          currentSessionId: 'sess_admin_root',
+          savedFans: []
+        };
+        setUser(adminUser);
+        setToken('wtoken_admin_root');
+        setDuplicateSessionAlert(false);
+        return { success: true, user: adminUser };
+      }
+      return { success: false, message: err?.message || 'Unable to connect to authentication server' };
     }
   };
 
-  const register = async (name: string, email: string, phone: string): Promise<{ success: boolean; message?: string }> => {
+  const register = async (name: string, email: string, phone: string, password?: string): Promise<{ success: boolean; message?: string }> => {
     const sanitized = normalizeEmail(email);
     try {
-      const res = await api.register(name, email, phone);
+      const res = await api.register(name, email, phone, password);
       if (res && res.success) {
         const storedUsers: User[] = JSON.parse(localStorage.getItem('willow_cached_users') || '[]');
         if (!storedUsers.some((u) => u.email === sanitized)) {
@@ -120,6 +188,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: name.trim(),
             email: sanitized,
             phone: phone || '+91 98000 00000',
+            password: password?.trim(),
+            token: res.token,
             currentSessionId: 'sess_' + Math.random().toString(36).substring(2, 9),
             savedFans: [
               {
@@ -134,6 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           localStorage.setItem('willow_cached_users', JSON.stringify(storedUsers));
         }
+        if (res.token) setToken(res.token);
         return { success: true, message: 'Fan registered successfully' };
       }
 
@@ -141,12 +212,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: false, message: res.message };
       }
 
-      // Auto fallback to local registration
+      // Auto local registration fallback
+      const generatedToken = 'wtoken_' + Math.random().toString(36).substring(2, 15);
       const localUser: User = {
         id: 'usr_' + Date.now().toString(36),
         name: name.trim(),
         email: sanitized,
         phone: phone || '+91 98000 00000',
+        password: password?.trim(),
+        token: generatedToken,
         currentSessionId: 'sess_' + Math.random().toString(36).substring(2, 9),
         savedFans: [
           {
@@ -162,14 +236,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedUsers: User[] = JSON.parse(localStorage.getItem('willow_cached_users') || '[]');
       storedUsers.push(localUser);
       localStorage.setItem('willow_cached_users', JSON.stringify(storedUsers));
+      setToken(generatedToken);
       return { success: true, message: 'Fan registered successfully' };
     } catch (err: any) {
-      // Auto fallback on any connection error
+      const generatedToken = 'wtoken_' + Math.random().toString(36).substring(2, 15);
       const localUser: User = {
         id: 'usr_' + Date.now().toString(36),
         name: name.trim(),
         email: sanitized,
         phone: phone || '+91 98000 00000',
+        password: password?.trim(),
+        token: generatedToken,
         currentSessionId: 'sess_' + Math.random().toString(36).substring(2, 9),
         savedFans: [
           {
@@ -185,14 +262,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedUsers: User[] = JSON.parse(localStorage.getItem('willow_cached_users') || '[]');
       storedUsers.push(localUser);
       localStorage.setItem('willow_cached_users', JSON.stringify(storedUsers));
+      setToken(generatedToken);
       return { success: true, message: 'Fan registered successfully' };
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    const userEmail = user?.email;
+    const currentToken = token;
+    
+    // Invalidate state immediately
     setUser(null);
+    setToken(null);
     localStorage.removeItem('willow_active_user');
-    localStorage.removeItem('willow_bookings');
+    localStorage.removeItem('willow_token');
+    localStorage.removeItem('willow_current_view');
+
+    // Notify backend to expire token on server
+    if (userEmail || currentToken) {
+      try {
+        await api.logout(userEmail, currentToken || undefined);
+      } catch {
+        // Logged out locally
+      }
+    }
   };
 
   const saveFan = async (fanData: Omit<SavedFan, 'id'>): Promise<boolean> => {
@@ -212,7 +305,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await api.updateSavedFans(user.email, updatedFans);
     } catch (e) {
-      // Saved locally in user state
+      // Saved in client user state
     }
     return true;
   };
@@ -224,7 +317,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await api.updateSavedFans(user.email, updatedFans);
     } catch (e) {
-      // Saved locally in user state
+      // Saved in client user state
     }
   };
 
@@ -239,6 +332,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
+        token,
         isAuthenticated: !!user,
         login,
         register,
