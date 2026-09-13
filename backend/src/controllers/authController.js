@@ -103,7 +103,7 @@ export const login = (req, res) => {
   if (!user && sanitized === 'fan@willow.com') {
     user = {
       id: 'fan_demo_01',
-      name: 'Virat Sharma (Demo Fan)',
+      name: 'Virat Sharma',
       email: 'fan@willow.com',
       phone: '+91 98200 88412',
       password: 'fan123',

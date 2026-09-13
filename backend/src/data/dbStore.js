@@ -12,7 +12,7 @@ export const DB = {
     },
     {
       id: 'fan_demo_01',
-      name: 'Virat Sharma (Demo Fan)',
+      name: 'Virat Sharma',
       email: 'fan@willow.com',
       password: 'fan123',
       role: 'fan',

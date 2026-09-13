@@ -520,7 +520,7 @@ export const AdminPage: React.FC<AdminPageProps> = () => {
                     Email: <span className="text-slate-200 font-bold">{usr.email}</span> • Phone: {usr.phone}
                   </p>
                   <p className="text-[11px] text-slate-500 font-mono">
-                    Session Token: {usr.currentSessionId}
+                    Member ID: {usr.id}
                   </p>
                 </div>
 

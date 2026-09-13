@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, Trash2, Smartphone, CheckCircle2 } from 'lucide-react';
+import { UserPlus, Trash2, ShieldCheck, CheckCircle2 } from 'lucide-react';
 
 export const ProfilePage: React.FC = () => {
-  const { user, saveFan, removeFan, simulateDuplicateLogin } = useAuth();
+  const { user, saveFan, removeFan } = useAuth();
 
   const [name, setName] = useState('');
   const [age, setAge] = useState<number>(25);
@@ -40,14 +40,14 @@ export const ProfilePage: React.FC = () => {
       
       <div className="glass-panel rounded-3xl p-6 sm:p-8 border border-willow-emerald/30 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-willow-emerald to-teal-400 p-0.5 shadow-glow-emerald flex items-center justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-willow-emerald to-teal-400 p-0.5 shadow-glow-emerald flex items-center justify-center shrink-0">
             <div className="w-full h-full bg-willow-900 rounded-[14px] flex items-center justify-center text-2xl font-black text-white">
               {user.name.charAt(0)}
             </div>
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-black">{user.name}</h2>
+              <h2 className="text-2xl font-black">{user.name.replace('(Demo Fan)', '').trim()}</h2>
               <span className="px-2 py-0.5 rounded-full bg-willow-emerald/20 text-willow-neon text-[10px] font-bold border border-willow-emerald/40">
                 Verified Fan
               </span>
@@ -57,18 +57,12 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-willow-850/80 border border-slate-700/60 text-right space-y-1">
+        <div className="p-3.5 px-4 rounded-2xl bg-willow-850/80 border border-slate-700/60 text-right space-y-1">
           <div className="flex items-center gap-1.5 text-xs text-willow-emerald font-bold justify-end">
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>Single Active Device Session</span>
+            <ShieldCheck className="w-4 h-4 text-willow-emerald" />
+            <span>Account Status: Active & Verified</span>
           </div>
-          <p className="text-[11px] text-slate-400 font-mono">Token: {user.currentSessionId}</p>
-          <button
-            onClick={simulateDuplicateLogin}
-            className="text-[10px] text-red-400 hover:text-red-300 underline font-bold mt-1"
-          >
-            Simulate Duplicate Login on Another Phone
-          </button>
+          <p className="text-[11px] text-slate-400">1 Device Session Active</p>
         </div>
       </div>
 
@@ -90,7 +84,7 @@ export const ProfilePage: React.FC = () => {
           {user.savedFans.length < 4 && !showAddForm && (
             <button
               onClick={() => setShowAddForm(true)}
-              className="px-4 py-2 rounded-xl bg-willow-emerald text-black font-black text-xs shadow-glow-emerald hover:brightness-110 transition-all flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl bg-willow-emerald text-black font-black text-xs shadow-glow-emerald hover:brightness-110 transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
               <span>Add Fan to Master List</span>
@@ -157,13 +151,13 @@ export const ProfilePage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700"
+                className="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold hover:bg-slate-700 cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-willow-emerald text-black text-xs font-black shadow-glow-emerald hover:brightness-110"
+                className="px-5 py-2 rounded-xl bg-willow-emerald text-black text-xs font-black shadow-glow-emerald hover:brightness-110 cursor-pointer"
               >
                 Save Fan to Profile
               </button>
@@ -189,7 +183,7 @@ export const ProfilePage: React.FC = () => {
               <button
                 onClick={() => removeFan(fan.id)}
                 title="Remove fan"
-                className="p-2 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                className="p-2 rounded-xl text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
               >
                 <Trash2 className="w-4 h-4" />
               </button>
