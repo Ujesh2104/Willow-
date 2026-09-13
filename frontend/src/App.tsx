@@ -17,13 +17,15 @@ const MainApp: React.FC = () => {
     try {
       const saved = localStorage.getItem('willow_current_view');
       const userRaw = localStorage.getItem('willow_active_user');
-      const tokenRaw = localStorage.getItem('willow_token');
-      if (userRaw && tokenRaw) {
+      if (userRaw) {
         const u = JSON.parse(userRaw);
-        if (saved && saved !== 'login' && saved !== 'register' && saved !== 'home') {
+        if (saved && saved !== 'login' && saved !== 'register') {
           return saved;
         }
-        return u.role === 'admin' ? 'admin' : 'dashboard';
+        return (u.role === 'admin' || u.email === 'admin@willow.com') ? 'admin' : 'dashboard';
+      }
+      if (saved && (saved === 'login' || saved === 'register' || saved === 'home')) {
+        return saved;
       }
     } catch {}
     return 'home';
@@ -38,14 +40,24 @@ const MainApp: React.FC = () => {
     } catch {}
   };
 
-  // Keep view in sync when authentication status changes
+  // Synchronize view when authentication status changes
   useEffect(() => {
     if (!isAuthenticated) {
       if (currentView === 'dashboard' || currentView === 'admin') {
-        setCurrentView('home');
+        setCurrentViewState('home');
+        try { localStorage.setItem('willow_current_view', 'home'); } catch {}
+      }
+    } else {
+      // If logged in and on an unauthenticated view like home, auto-navigate to the right dashboard
+      if (currentView === 'home' || currentView === 'login' || currentView === 'register') {
+        const defaultView = (user?.role === 'admin' || user?.email === 'admin@willow.com') ? 'admin' : 'dashboard';
+        const saved = localStorage.getItem('willow_current_view');
+        const target = (saved && saved !== 'home' && saved !== 'login' && saved !== 'register') ? saved : defaultView;
+        setCurrentViewState(target);
+        try { localStorage.setItem('willow_current_view', target); } catch {}
       }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, user?.role, user?.email]);
 
   const handleRegisterSuccess = () => {
     setJustRegisteredMsg('🎉 Fan Account verified successfully! Please log in to access the stadium drop portal.');
