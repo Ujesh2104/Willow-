@@ -99,6 +99,46 @@ export const login = (req, res) => {
     DB.users.push(user);
   }
 
+  // Default demo fan account auto-provision if missing
+  if (!user && sanitized === 'fan@willow.com') {
+    user = {
+      id: 'fan_demo_01',
+      name: 'Virat Sharma (Demo Fan)',
+      email: 'fan@willow.com',
+      phone: '+91 98200 88412',
+      password: 'fan123',
+      role: 'fan',
+      currentSessionId: 'sess_fan_demo',
+      savedFans: [
+        {
+          id: 'fan_01',
+          name: 'Virat Sharma',
+          age: 28,
+          gender: 'M',
+          idType: 'Aadhaar',
+          idNumber: '•••• •••• 4421'
+        },
+        {
+          id: 'fan_02',
+          name: 'Priya Sharma',
+          age: 26,
+          gender: 'F',
+          idType: 'Passport',
+          idNumber: '•••• •••• 8812'
+        },
+        {
+          id: 'fan_03',
+          name: 'Aarav Sharma',
+          age: 8,
+          gender: 'M',
+          idType: 'Aadhaar',
+          idNumber: '•••• •••• 1920'
+        }
+      ]
+    };
+    DB.users.push(user);
+  }
+
   if (!user) {
     return res.status(404).json({
       success: false,

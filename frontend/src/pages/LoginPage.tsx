@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Mail, Lock, CheckCircle2, AlertTriangle, ArrowRight, User, Settings, KeyRound } from 'lucide-react';
+import { ShieldCheck, Mail, Lock, CheckCircle2, AlertTriangle, ArrowRight, User, Settings, KeyRound, Sparkles } from 'lucide-react';
 
 interface LoginPageProps {
   onLoginSuccess: (role: 'fan' | 'admin') => void;
@@ -19,27 +19,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeLogin = async (loginEmail: string, loginPassword?: string) => {
     setError('');
-
-    if (!email) {
-      setError('Please enter your email address.');
-      return;
-    }
-
-    if (!password) {
-      setError('Please enter your account password.');
-      return;
-    }
-
     setLoading(true);
     try {
-      const res = await login(email, password);
+      const res = await login(loginEmail, loginPassword);
       setLoading(false);
 
       if (res.success) {
-        const isAdmin = res.user?.role === 'admin' || email.trim().toLowerCase() === 'admin@willow.com';
+        const isAdmin = res.user?.role === 'admin' || loginEmail.trim().toLowerCase() === 'admin@willow.com';
         const role = isAdmin ? 'admin' : 'fan';
         onLoginSuccess(role);
       } else {
@@ -51,10 +39,29 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     }
   };
 
-  const fillAdminCredentials = () => {
-    setEmail('admin@willow.com');
-    setPassword('admin123');
-    setError('');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Please enter your email address.');
+      return;
+    }
+    if (!password) {
+      setError('Please enter your account password.');
+      return;
+    }
+    await executeLogin(email, password);
+  };
+
+  const handleInstantDemoLogin = async (role: 'fan' | 'admin') => {
+    if (role === 'admin') {
+      setEmail('admin@willow.com');
+      setPassword('admin123');
+      await executeLogin('admin@willow.com', 'admin123');
+    } else {
+      setEmail('fan@willow.com');
+      setPassword('fan123');
+      await executeLogin('fan@willow.com', 'fan123');
+    }
   };
 
   return (
@@ -133,18 +140,36 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
         </form>
 
-        <div className="pt-2 flex flex-col gap-2">
-          <button
-            type="button"
-            onClick={fillAdminCredentials}
-            className="w-full py-2 px-3 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/30 text-purple-300 text-[11px] font-mono flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-          >
-            <KeyRound className="w-3.5 h-3.5" />
-            <span>Fill Admin Credentials (admin@willow.com)</span>
-          </button>
+        {/* 1-Click Demo Logins */}
+        <div className="pt-2 border-t border-slate-800/80 space-y-2">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 text-center">
+            ⚡ Quick Demo Accounts (1-Click Login)
+          </p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => handleInstantDemoLogin('fan')}
+              className="py-2.5 px-3 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-glow-emerald/30 hover:scale-[1.02]"
+            >
+              <User className="w-3.5 h-3.5 text-willow-emerald" />
+              <span>Demo Fan Login</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => handleInstantDemoLogin('admin')}
+              className="py-2.5 px-3 rounded-xl bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/40 text-purple-300 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-glow-emerald/30 hover:scale-[1.02]"
+            >
+              <Settings className="w-3.5 h-3.5 text-purple-400" />
+              <span>Demo Admin Login</span>
+            </button>
+          </div>
         </div>
 
-        <div className="text-center pt-3 text-xs text-slate-400 border-t border-slate-800">
+        <div className="text-center pt-2 text-xs text-slate-400">
           New fan?{' '}
           <button
             type="button"
