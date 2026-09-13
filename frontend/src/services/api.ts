@@ -3,9 +3,14 @@ import { Match, Stand, Seat, Booking, User, SavedFan } from '../types';
 const DEFAULT_REMOTE_API = 'https://willow-wfjv.onrender.com/api';
 const DEFAULT_LOCAL_API = 'http://localhost:5000/api';
 
+const normalizeApiUrl = (url: string): string => {
+  const clean = url.trim().replace(/\/+$/, '');
+  return clean.endsWith('/api') ? clean : `${clean}/api`;
+};
+
 const getBaseUrl = (): string => {
   if (import.meta.env.VITE_API_URL) {
-    return (import.meta.env.VITE_API_URL as string).replace(/\/+$/, '');
+    return normalizeApiUrl(import.meta.env.VITE_API_URL as string);
   }
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
@@ -31,8 +36,23 @@ const getAuthHeaders = (): Record<string, string> => {
   return headers;
 };
 
+const cleanErrorMessage = (status: number, rawText: string): string => {
+  if (status === 404) {
+    return 'User Not Found: No account is registered with this email. Please click "Create Account" below.';
+  }
+  if (rawText.includes('Cannot POST') || rawText.includes('<!DOCTYPE') || rawText.includes('<html')) {
+    return 'User Not Found: No account is registered with this email. Please click "Create Account" below.';
+  }
+  if (status === 401) {
+    return 'Invalid password. Please check your credentials and try again.';
+  }
+  return rawText || `Server error (HTTP ${status})`;
+};
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const primaryUrl = `${API_BASE_URL}${path}`;
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+  const primaryUrl = `${API_BASE_URL}${cleanPath}`;
+  
   const mergedOptions: RequestInit = {
     ...options,
     headers: {
@@ -49,12 +69,12 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       return data;
     }
     const text = await res.text();
-    return { success: res.ok, message: text || `HTTP ${res.status}` } as any;
+    return { success: res.ok, message: cleanErrorMessage(res.status, text) } as any;
   } catch (primaryErr: any) {
     // If primary failed (e.g., localhost is unreachable), try the live Render backend
     if (API_BASE_URL !== DEFAULT_REMOTE_API) {
       try {
-        const fallbackUrl = `${DEFAULT_REMOTE_API}${path}`;
+        const fallbackUrl = `${DEFAULT_REMOTE_API}${cleanPath}`;
         const res = await fetch(fallbackUrl, mergedOptions);
         const contentType = res.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
@@ -62,9 +82,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
           return data;
         }
         const text = await res.text();
-        return { success: res.ok, message: text || `HTTP ${res.status}` } as any;
+        return { success: res.ok, message: cleanErrorMessage(res.status, text) } as any;
       } catch (fallbackErr: any) {
-        throw new Error(fallbackErr?.message || 'Unable to reach Willow Ticket API');
+        throw new Error('Unable to connect to Willow API backend. Please verify your connection.');
       }
     }
     throw new Error(primaryErr?.message || 'Network error connecting to Willow API');

@@ -38,7 +38,7 @@ export const register = (req, res) => {
   }
 
   const token = generateSecureToken();
-  const tokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours expiry
+  const tokenExpiresAt = Date.now() + 24 * 60 * 60 * 1000;
   const newSessionId = 'sess_' + Math.random().toString(36).substring(2, 9);
 
   const newUser = {
@@ -102,7 +102,7 @@ export const login = (req, res) => {
   if (!user) {
     return res.status(404).json({
       success: false,
-      message: `No registered account found with ${sanitized}. Please create an account first.`
+      message: `User Not Found: No account is registered with ${sanitized}. Please click "Create Account" below.`
     });
   }
 
@@ -147,7 +147,6 @@ export const logout = (req, res) => {
   }
 
   if (user) {
-    // Invalidate token and session immediately
     user.token = null;
     user.tokenExpiresAt = 0;
     user.currentSessionId = null;
@@ -160,7 +159,7 @@ export const logout = (req, res) => {
 };
 
 export const verifyToken = (req, res) => {
-  const token = req.headers.authorization?.replace('Bearer ', '') || req.body.token;
+  const token = req.headers.authorization?.replace('Bearer ', '') || req.body?.token;
   if (!token) {
     return res.status(401).json({ success: false, message: 'No token provided' });
   }

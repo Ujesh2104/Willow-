@@ -5,10 +5,17 @@ import apiRoutes from './routes/apiRoutes.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({ origin: '*' }));
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+app.options('*', cors());
 app.use(express.json());
 
+// Support both /api/* and direct /* routing
 app.use('/api', apiRoutes);
+app.use('/', apiRoutes);
 
 app.get('/health', (req, res) => {
   res.json({

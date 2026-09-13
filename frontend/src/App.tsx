@@ -17,8 +17,13 @@ const MainApp: React.FC = () => {
     try {
       const saved = localStorage.getItem('willow_current_view');
       const userRaw = localStorage.getItem('willow_active_user');
-      if (saved && userRaw) {
-        return saved;
+      const tokenRaw = localStorage.getItem('willow_token');
+      if (userRaw && tokenRaw) {
+        const u = JSON.parse(userRaw);
+        if (saved && saved !== 'login' && saved !== 'register' && saved !== 'home') {
+          return saved;
+        }
+        return u.role === 'admin' ? 'admin' : 'dashboard';
       }
     } catch {}
     return 'home';
